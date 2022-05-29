@@ -1,0 +1,12 @@
+[org/gnome/settings-daemon/plugins/media-keys]
+custom-keybindings=['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-calculaltor/', '/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-gedit/']
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-calculaltor]
+name='open calculator'
+command='/usr/bin/gnome-calculator'
+binding='<Control><Alt>k'
+
+[org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-gedit]
+name='open gedit'
+command='/usr/bin/gedit'
+binding='<Control><Alt>g'

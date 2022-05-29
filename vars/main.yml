@@ -1,0 +1,68 @@
+---
+mysql_repo_version: "0.8.22-1_all"
+docker_compose_version: "1.29.2"
+wps_office_deb: "https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/10976/wps-office_11.1.0.10976.XA_amd64.deb"
+pkg_list:
+  - build-essential
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - mysql-workbench
+  - mysql-client
+  - nmap
+  - transmission
+  - vim
+  - vlc
+  - ldap-utils
+  - gnucash
+  - gimp
+  - ffmpeg
+  - virtualbox
+  - code
+  - openjdk-jdk
+  - traceroute
+  - imagemagick
+  - wine
+  - python3-pip
+  - winetricks
+  - dropbox
+  - spotify-client
+  - git
+  - ca-certificates
+  - wget
+  - net-tools
+  - gnupg
+  - openvpn-as
+  - pdftk
+python_libs:
+  - sklearn
+  - pandas
+  - seaborn
+  - SQLAlchemy
+  - beautifulsoup4
+  - selenium
+  - requests
+  - notify2
+  - logging
+  - logzero
+vscode_extensions:
+  - donjayamanne.githistory
+  - felixfbecker.php-intellisense
+  - hashicorp.terraform
+  - jpoissonnier.vscode-styled-components
+  - mrmlnc.vscode-apache
+  - ms-azuretools.vscode-docker
+  - ms-python.python
+  - ms-python.vscode-pylance
+  - ms-toolsai.jupyter
+  - ms-toolsai.jupyter-keymap
+  - ms-toolsai.jupyter-renderers
+  - ms-vscode-remote.remote-containers
+  - ms-vscode-remote.remote-ssh
+  - ms-vscode-remote.remote-ssh-edit
+  - ms-vscode-remote.remote-wsl
+  - ms-vscode-remote.vscode-remote-extensionpack
+  - redhat.ansible
+  - redhat.vscode-yaml
+  - ritwickdey.LiveServer
+  - xdebug.php-debug

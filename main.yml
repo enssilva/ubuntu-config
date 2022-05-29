@@ -1,0 +1,286 @@
+---
+- name: Configure Ubuntu
+  hosts: localhost
+  become: true
+  connection: local
+  vars_files:
+    - 'vars/main.yml'
+    - 'vars/secret.yml'
+
+  tasks:
+    - name: Update & Upgrade
+      apt:
+        update_cache: true
+        upgrade: dist
+        autoremove: true
+        autoclean: true
+      register: apt_action
+      retries: 50
+      until: apt_action is success or ('Failed to lock apt for exclusive operation' not in apt_action.msg and '/var/lib/dpkg/lock' not in apt_action.msg)
+
+    - name: Install MySQL Repository Setup Package
+      apt:
+        deb: https://dev.mysql.com/get/mysql-apt-config_{{ mysql_repo_version }}.deb
+
+    - name: Accept virtualbox-ext-pack select license
+      shell: echo virtualbox-ext-pack virtualbox-ext-pack/license select true | debconf-set-selections
+      when: "'virtualbox-ext-pack' not in ansible_facts.packages"
+
+    - name: Add Docker's official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        keyring: /usr/share/keyrings/docker-archive-keyring.gpg
+        state: present
+
+    - name: Add Docker's repository
+      copy:
+        src: files/docker.list
+        dest: /etc/apt/sources.list.d/docker.list
+        mode: '0644'
+
+    - name: Add VS Code's GPG key
+      apt_key:
+        url: https://packages.microsoft.com/keys/microsoft.asc
+        keyring: /etc/apt/trusted.gpg.d/packages.microsoft.gpg
+        state: present
+
+    - name: Add VS Code's repository
+      apt_repository:
+        repo: deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main
+        state: present
+        filename: vscode
+
+    - name: Add Wine repository
+      apt_repository:
+        repo: deb https://dl.winehq.org/wine-builds/ubuntu/ {{ ansible_distribution_release }} main
+        state: present
+        filename: wine
+
+    - name: Add Virtual Box repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.virtualbox.org/virtualbox/debian {{ ansible_distribution_release }} contrib
+        state: present
+        filename: virtualbox
+
+    - name: Add Dropbox's GPG key
+      apt_key:
+        keyserver: pgp.mit.edu
+        id: 1C61A2656FB57B7E4DE0F4C1FC918B335044912E
+
+    - name: Add Dropbox repository
+      apt_repository:
+        repo: deb https://linux.dropbox.com/ubuntu {{ ansible_distribution_release }} main
+        state: present
+        filename: dropbox
+
+    - name: Add Spotify's GPG key
+      apt_key:
+        url: https://download.spotify.com/debian/pubkey_5E3C45D7B312C643.gpg
+        keyring: /etc/apt/trusted.gpg.d/spotify.gpg
+        state: present
+
+    - name: Add Spotify repository
+      apt_repository:
+        repo: deb http://repository.spotify.com stable non-free
+        state: present
+        filename: spotify
+
+    - name: Add git latest stable repository from PPA
+      apt_repository:
+        repo: ppa:git-core/ppa
+
+    - name: Add OpenVPN's GPG key
+      apt_key:
+        url: https://as-repository.openvpn.net/as-repo-public.gpg
+        keyring: /etc/apt/trusted.gpg.d/openvpn.gpg
+        state: present
+
+    - name: Add OpenVPN repository
+      apt_repository:
+        repo: deb http://as-repository.openvpn.net/as/debian {{ ansible_distribution_release }} main
+        state: present
+        filename: openvpn
+
+    - name: Install needed packages
+      apt:
+        name: "{{ pkg_list }}"
+        state: present
+        update_cache: true
+
+    - name: Install docker compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Install Google Chrome
+      apt:
+        deb: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+        state: present
+
+    - name: Get Calibre installer
+      get_url:
+        url: https://download.calibre-ebook.com/linux-installer.sh
+        dest: /opt/calibre-installer.sh
+        mode: '0744'
+
+    - name: Instal Calibre
+      shell: /opt/calibre-installer.sh
+
+    - name: Install WPS Office
+      apt:
+        deb: "{{ wps_office_deb }}"
+        state: present
+
+    - name: Install python needed libs
+      pip:
+        name: "{{ python_libs }}"
+
+    - name: Install VS Code extensions
+      shell: code --install-extension {{ item }}
+      with_items: "{{ vscode_extensions }}"
+      become_user: "{{ username }}"
+
+    - name: Add user to docker's group
+      user:
+        name: "{{ username }}"
+        group: docker
+        append: yes
+
+    - name: Configure new dconf profile for keyboard shortcut
+      copy:
+        src: files/dconf-profiile-user
+        dest: /etc/dconf/profile/user
+        owner: root
+        group: root
+        mode: 0644
+      notify: Update dconf
+
+    - name: Create directory for custom keyboard shortcut
+      file:
+        path: /etc/dconf/db/local.d
+        state: directory
+      notify: Update dconf
+
+    - name: Copy custom keyboard shortcut
+      copy:
+        src: files/01-local-keyboard-shortcut
+        dest: /etc/dconf/db/local.d/01-local-keyboard-shortcut
+      notify: Update dconf
+
+    - name: Configure OpenVPN
+      shell: openvpn --config files/{{ openvpn_file }}
+
+    - name: Create /opt/script directory
+      file:
+        path: /opt/script
+        state: directory
+        owner: root
+        group: root
+        mode: 0755
+
+    - name: Copy script to update packages
+      copy:
+        src: files/update.sh
+        dest: /opt/script/update.sh
+        owner: root
+        group: root
+        mode: 0744
+
+    - name: Copy script to check for manga update
+      template:
+        src: templates/manga.sh.j2
+        dest: /opt/script/manga.sh
+        owner: root
+        group: root
+        mode: 0777
+
+    - name: Add config to bash.bashrc
+      blockinfile:
+        path: /etc/bash.bashrc
+        block: |
+          export PATH=/opt/script:$PATH
+          DOCKER_HOST_IP=$(ip addr show docker0 | grep -Po 'inet \K[\d.]+')
+          export WINEARCH=win32
+          export WINEPREFIX=/home/{{ username }}/.wine32
+        state: present
+
+    - name: Create folders to git
+      file:
+        path: /home/{{ username }}/{{ item }}
+        state: directory
+        mode: 0755
+        owner: "{{ username  }}"
+        group: "{{ username  }}"
+      with_items:
+        - gitlab
+        - github
+
+    - name: Clone manga repository
+      git:
+        repo: https://github.com/enssilva/scraping-manga.git
+        dest: /home/{{ username }}/github
+      become_user: "{{ username }}"
+
+    - name: Get Gecko
+      get_url:
+        url: http://dl.winehq.org/wine/wine-gecko/2.47.2/wine-gecko-2.47.2-{{ item }}.msi
+        dest: /tmp/
+      with_items:
+        - x86
+        - x86_64
+
+    - name: Install Gecko
+      shell: WINEPREFIX=/home/{{ username }}/.wine32 wine msiexec /i /tmp/wine-gecko-2.47.2-{{ item }}.msi
+      with_items:
+        - x86
+        - x86_64
+      become_user: "{{ username }}"
+
+    - name: Install .NET 4.0 with winetricks
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 winetricks dotnet40 -q
+      become_user: "{{ username }}"
+
+    - name: Install mfc42 library with winetricks
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 winetricks mfc42 -q
+      become_user: "{{ username }}"
+
+    - name: Install Adob Digital Edition with winetricks
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 winetricks adobe_diged4 -q
+      become_user: "{{ username }}"
+
+    - name: Install kindle reader 1.16 certfile
+      copy:
+        src: files/kindle.cert
+        dest: /etc/ssh/certs/b204d74a.0
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Install Kindler Reader with winetricks
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 winetricks kindle -q
+      become_user: "{{ username }}"
+
+    - name: Install Windows Java JRE with wine
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 wine files/jre-8u311-windows-i586.exe /s
+      become_user: "{{ username }}"
+
+    - name: Change registry to enable Java to work with wine
+      lineinfile:
+        path: /home/{{ username }}/.wine32/system.reg
+        line: "{{ item }}"
+        insertbefore: '^"PATH"='
+      with_items:
+        - '"_JAVA_OPTIONS"="-Xmx512M"'
+        - '"JAVA_HOME"=str(7):"C:\\Program Files\\Java\\jre1.8.0_311\0"'
+
+    - name: Change registry to add Java to PATH
+      lineinfile:
+        path: /home/{{ username }}/.wine32/system.reg
+        regexp: '"PATH"=(.*)"\n'
+        line: '"PATH"=\1;%JAVA_HOME%\\\\bin"'
+        backrefs: yes
+
+    - name: Install Cisco Network Assistant with wine
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 wine files/cna-windows-k9-installer-6-3-4-en.exe /s
+      become_user: "{{ username }}"
