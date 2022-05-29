@@ -35,6 +35,8 @@ pkg_list:
   - openvpn-as
   - pdftk
   - firefox
+  - android-tools-adb
+  - android-tools-fastboot
 python_libs:
   - sklearn
   - pandas
