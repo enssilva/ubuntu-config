@@ -285,3 +285,9 @@
     - name: Install Cisco Network Assistant with wine
       shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 wine files/cna-windows-k9-installer-6-3-4-en.exe /s
       become_user: "{{ username }}"
+
+    - name: Configure cron
+      ansible.builtin.cron:
+        name: "check manga update"
+        minute: "0"
+        job: "XDG_RUNTIME_DIR=/run/user/$(id -u) /usr/bin/python3 /home/ebenezer/git/scraping-manga/scraping-manga.py 2>&1 | /usr/bin/logger -t MANGA"
