@@ -34,6 +34,7 @@ pkg_list:
   - gnupg
   - openvpn-as
   - pdftk
+  - firefox
 python_libs:
   - sklearn
   - pandas
