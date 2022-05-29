@@ -225,13 +225,14 @@
     - name: Get Gecko
       get_url:
         url: http://dl.winehq.org/wine/wine-gecko/2.47.2/wine-gecko-2.47.2-{{ item }}.msi
-        dest: /tmp/
+        dest: /opt/
+        mode: 0755
       with_items:
         - x86
         - x86_64
 
     - name: Install Gecko
-      shell: WINEPREFIX=/home/{{ username }}/.wine32 wine msiexec /i /tmp/wine-gecko-2.47.2-{{ item }}.msi
+      shell: WINEPREFIX=/home/{{ username }}/.wine32 wine msiexec /i /opt/wine-gecko-2.47.2-{{ item }}.msi
       with_items:
         - x86
         - x86_64
