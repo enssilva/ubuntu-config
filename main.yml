@@ -18,9 +18,13 @@
       retries: 50
       until: apt_action is success or ('Failed to lock apt for exclusive operation' not in apt_action.msg and '/var/lib/dpkg/lock' not in apt_action.msg)
 
-    - name: Install MySQL Repository Setup Package
-      apt:
-        deb: https://dev.mysql.com/get/mysql-apt-config_{{ mysql_repo_version }}.deb
+    - name: Get information about installed packages
+      package_facts:
+        manager: auto
+
+          #    - name: Install MySQL Repository Setup Package
+          #      apt:
+          #        deb: https://dev.mysql.com/get/mysql-apt-config_{{ mysql_repo_version }}.deb
 
     - name: Accept virtualbox-ext-pack select license
       shell: echo virtualbox-ext-pack virtualbox-ext-pack/license select true | debconf-set-selections
@@ -41,65 +45,85 @@
     - name: Add VS Code's GPG key
       apt_key:
         url: https://packages.microsoft.com/keys/microsoft.asc
-        keyring: /etc/apt/trusted.gpg.d/packages.microsoft.gpg
+        keyring: /usr/share/keyrings/packages.microsoft.gpg
         state: present
 
     - name: Add VS Code's repository
       apt_repository:
-        repo: deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main
+        repo: deb [arch=amd64,arm64,armhf signed-by=/usr/share/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main
         state: present
         filename: vscode
 
-    - name: Add Wine repository
-      apt_repository:
-        repo: deb https://dl.winehq.org/wine-builds/ubuntu/ {{ ansible_distribution_release }} main
+    - name: Add Wine GPG key
+      apt_key:
+        url: https://dl.winehq.org/wine-builds/winehq.key
+        keyring: /usr/share/keyrings/winehq-archive.key
         state: present
-        filename: wine
 
+    - name: Add Wine repository
+      get_url:
+        url: https://dl.winehq.org/wine-builds/ubuntu/dists/{{ ansible_distribution_release }}/winehq-{{ ansible_distribution_release }}.sources
+        dest: /etc/apt/sources.list.d/winehq-{{ ansible_distribution_release }}.sources
+
+    - name: Add Virtual Box key
+      apt_key:
+        url: https://www.virtualbox.org/download/oracle_vbox_2016.asc
+        state: present
+        keyring: /usr/share/keyrings/oracle_vbox_2016.gpg
+    
     - name: Add Virtual Box repository
       apt_repository:
-        repo: deb [arch=amd64] https://download.virtualbox.org/virtualbox/debian {{ ansible_distribution_release }} contrib
+        repo: deb [arch=amd64 signed-by=/usr/share/keyrings/oracle_vbox_2016.gpg] https://download.virtualbox.org/virtualbox/debian {{ ansible_distribution_release }} contrib
         state: present
         filename: virtualbox
 
-    - name: Add Dropbox's GPG key
-      apt_key:
-        keyserver: pgp.mit.edu
-        id: 1C61A2656FB57B7E4DE0F4C1FC918B335044912E
-
-    - name: Add Dropbox repository
-      apt_repository:
-        repo: deb https://linux.dropbox.com/ubuntu {{ ansible_distribution_release }} main
-        state: present
-        filename: dropbox
+          #    - name: Add Dropbox's GPG key
+          #      apt_key:
+          #        keyserver: pgp.mit.edu
+          #        id: 1C61A2656FB57B7E4DE0F4C1FC918B335044912E
+          #        keyring: /usr/share/keyrings/dropbox.gpg
+          #
+          #    - name: Add Dropbox repository
+          #      apt_repository:
+          #        repo: deb [signed-by=/usr/share/keyrings/dropbox.gpg] https://linux.dropbox.com/ubuntu {{ ansible_distribution_release }} main
+          #        state: present
+          #        filename: dropbox
 
     - name: Add Spotify's GPG key
       apt_key:
         url: https://download.spotify.com/debian/pubkey_5E3C45D7B312C643.gpg
-        keyring: /etc/apt/trusted.gpg.d/spotify.gpg
+        keyring: /usr/share/keyrings/spotify.gpg
         state: present
 
     - name: Add Spotify repository
       apt_repository:
-        repo: deb http://repository.spotify.com stable non-free
+        repo: deb [signed-by=/usr/share/keyrings/spotify.gpg] http://repository.spotify.com stable non-free
         state: present
         filename: spotify
 
+    - name: Add git PPA's GPG key
+      apt_key:
+        keyserver: keyserver.ubuntu.com
+        id: E1DD270288B4E6030699E45FA1715D88E1DF1F24
+        keyring: /usr/share/keyrings/git.gpg
+        state: present
+
     - name: Add git latest stable repository from PPA
       apt_repository:
-        repo: ppa:git-core/ppa
+        repo: deb [signed-by=/usr/share/keyrings/git.gpg] http://ppa.launchpad.net/git-core/ppa/ubuntu {{ ansible_distribution_release }} main
+        filename: git
 
-    - name: Add OpenVPN's GPG key
-      apt_key:
-        url: https://as-repository.openvpn.net/as-repo-public.gpg
-        keyring: /etc/apt/trusted.gpg.d/openvpn.gpg
-        state: present
-
-    - name: Add OpenVPN repository
-      apt_repository:
-        repo: deb http://as-repository.openvpn.net/as/debian {{ ansible_distribution_release }} main
-        state: present
-        filename: openvpn
+          #    - name: Add OpenVPN's GPG key
+          #      apt_key:
+          #        url: https://as-repository.openvpn.net/as-repo-public.gpg
+          #        keyring: /usr/share/keyrings/openvpn.gpg
+          #        state: present
+          #
+          #    - name: Add OpenVPN repository
+          #      apt_repository:
+          #        repo: deb [signed-by=/usr/share/keyrings/openvpn.gpg] http://as-repository.openvpn.net/as/debian {{ ansible_distribution_release }} main
+          #        state: present
+          #        filename: openvpn
 
     - name: Install needed packages
       apt:
@@ -131,6 +155,11 @@
       apt:
         deb: "{{ wps_office_deb }}"
         state: present
+
+    - name: Install MySql Workbench
+      community.general.snap:
+        name: mysql-workbench-community
+        classic: yes
 
     - name: Install python needed libs
       pip:

@@ -7,7 +7,7 @@ pkg_list:
   - docker-ce
   - docker-ce-cli
   - containerd.io
-  - mysql-workbench
+    #  - mysql-workbench
   - mysql-client
   - nmap
   - transmission
@@ -19,20 +19,21 @@ pkg_list:
   - ffmpeg
   - virtualbox
   - code
-  - openjdk-jdk
+  - default-jdk
   - traceroute
   - imagemagick
-  - wine
+    #  - winehq-stable
+  - winehq-staging
   - python3-pip
   - winetricks
-  - dropbox
+    #  - dropbox
+  - nautilus-dropbox
   - spotify-client
   - git
   - ca-certificates
   - wget
   - net-tools
   - gnupg
-  - openvpn-as
   - pdftk
   - firefox
   - android-tools-adb
