@@ -2,6 +2,7 @@
 mysql_repo_version: "0.8.22-1_all"
 docker_compose_version: "1.29.2"
 wps_office_deb: "https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/10976/wps-office_11.1.0.10976.XA_amd64.deb"
+winearch: 'win32'
 pkg_list:
   - build-essential
   - docker-ce
@@ -22,8 +23,8 @@ pkg_list:
   - default-jdk
   - traceroute
   - imagemagick
-    #  - winehq-stable
-  - winehq-staging
+  # - winehq-stable
+  # - winehq-staging
   - python3-pip
   - winetricks
     #  - dropbox
@@ -38,6 +39,7 @@ pkg_list:
   - firefox
   - android-tools-adb
   - android-tools-fastboot
+  - winbind
 python_libs:
   - sklearn
   - pandas
@@ -47,13 +49,13 @@ python_libs:
   - selenium
   - requests
   - notify2
-  - logging
+    #  - logging
   - logzero
 vscode_extensions:
   - donjayamanne.githistory
-  - felixfbecker.php-intellisense
+    #  - felixfbecker.php-intellisense
   - hashicorp.terraform
-  - jpoissonnier.vscode-styled-components
+    #  - jpoissonnier.vscode-styled-components
   - mrmlnc.vscode-apache
   - ms-azuretools.vscode-docker
   - ms-python.python
@@ -70,3 +72,4 @@ vscode_extensions:
   - redhat.vscode-yaml
   - ritwickdey.LiveServer
   - xdebug.php-debug
+  - nico-castell.linux-desktop-file

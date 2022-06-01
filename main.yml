@@ -22,9 +22,9 @@
       package_facts:
         manager: auto
 
-          #    - name: Install MySQL Repository Setup Package
-          #      apt:
-          #        deb: https://dev.mysql.com/get/mysql-apt-config_{{ mysql_repo_version }}.deb
+    # - name: Install MySQL Repository Setup Package
+    #   apt:
+    #     deb: https://dev.mysql.com/get/mysql-apt-config_{{ mysql_repo_version }}.deb
 
     - name: Accept virtualbox-ext-pack select license
       shell: echo virtualbox-ext-pack virtualbox-ext-pack/license select true | debconf-set-selections
@@ -77,17 +77,17 @@
         state: present
         filename: virtualbox
 
-          #    - name: Add Dropbox's GPG key
-          #      apt_key:
-          #        keyserver: pgp.mit.edu
-          #        id: 1C61A2656FB57B7E4DE0F4C1FC918B335044912E
-          #        keyring: /usr/share/keyrings/dropbox.gpg
-          #
-          #    - name: Add Dropbox repository
-          #      apt_repository:
-          #        repo: deb [signed-by=/usr/share/keyrings/dropbox.gpg] https://linux.dropbox.com/ubuntu {{ ansible_distribution_release }} main
-          #        state: present
-          #        filename: dropbox
+    # - name: Add Dropbox's GPG key
+    #   apt_key:
+    #     keyserver: pgp.mit.edu
+    #     id: 1C61A2656FB57B7E4DE0F4C1FC918B335044912E
+    #     keyring: /usr/share/keyrings/dropbox.gpg
+
+    # - name: Add Dropbox repository
+    #   apt_repository:
+    #     repo: deb [signed-by=/usr/share/keyrings/dropbox.gpg] https://linux.dropbox.com/ubuntu {{ ansible_distribution_release }} main
+    #     state: present
+    #     filename: dropbox
 
     - name: Add Spotify's GPG key
       apt_key:
@@ -112,18 +112,6 @@
       apt_repository:
         repo: deb [signed-by=/usr/share/keyrings/git.gpg] http://ppa.launchpad.net/git-core/ppa/ubuntu {{ ansible_distribution_release }} main
         filename: git
-
-          #    - name: Add OpenVPN's GPG key
-          #      apt_key:
-          #        url: https://as-repository.openvpn.net/as-repo-public.gpg
-          #        keyring: /usr/share/keyrings/openvpn.gpg
-          #        state: present
-          #
-          #    - name: Add OpenVPN repository
-          #      apt_repository:
-          #        repo: deb [signed-by=/usr/share/keyrings/openvpn.gpg] http://as-repository.openvpn.net/as/debian {{ ansible_distribution_release }} main
-          #        state: present
-          #        filename: openvpn
 
     - name: Install needed packages
       apt:
@@ -173,12 +161,12 @@
     - name: Add user to docker's group
       user:
         name: "{{ username }}"
-        group: docker
+        groups: docker
         append: yes
 
     - name: Configure new dconf profile for keyboard shortcut
       copy:
-        src: files/dconf-profiile-user
+        src: files/dconf-profile-user
         dest: /etc/dconf/profile/user
         owner: root
         group: root
@@ -196,9 +184,6 @@
         src: files/01-local-keyboard-shortcut
         dest: /etc/dconf/db/local.d/01-local-keyboard-shortcut
       notify: Update dconf
-
-    - name: Configure OpenVPN
-      shell: openvpn --config files/{{ openvpn_file }}
 
     - name: Create /opt/script directory
       file:
@@ -231,7 +216,7 @@
           export PATH=/opt/script:$PATH
           DOCKER_HOST_IP=$(ip addr show docker0 | grep -Po 'inet \K[\d.]+')
           export WINEARCH=win32
-          export WINEPREFIX=/home/{{ username }}/.wine32
+          export WINEPREFIX=/home/{{ username }}/.wine
         state: present
 
     - name: Create folders to git
@@ -248,56 +233,65 @@
     - name: Clone manga repository
       git:
         repo: https://github.com/enssilva/scraping-manga.git
-        dest: /home/{{ username }}/github
+        dest: /home/{{ username }}/github/scraping-manga
       become_user: "{{ username }}"
 
     - name: Get Gecko
       get_url:
-        url: http://dl.winehq.org/wine/wine-gecko/2.47.2/wine-gecko-2.47.2-{{ item }}.msi
+        url: http://dl.winehq.org/wine/wine-gecko/2.47.2/wine-gecko-2.47.2-x86.msi
         dest: /opt/
         mode: 0755
-      with_items:
-        - x86
-        - x86_64
+
+    - name: Create Wine prefix
+      shell: WINEPREFIX=/home/{{ username }}/.wine WINEARCH=win32 wine wineboot
+      become_user: "{{ username }}"
 
     - name: Install Gecko
-      shell: WINEPREFIX=/home/{{ username }}/.wine32 wine msiexec /i /opt/wine-gecko-2.47.2-{{ item }}.msi
-      with_items:
-        - x86
-        - x86_64
+      shell: WINEPREFIX=/home/{{ username }}/.wine WINEARCH=win32 wine msiexec /i /opt/wine-gecko-2.47.2-x86.msi
       become_user: "{{ username }}"
 
     - name: Install .NET 4.0 with winetricks
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 winetricks dotnet40 -q
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks dotnet40 -q
       become_user: "{{ username }}"
 
     - name: Install mfc42 library with winetricks
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 winetricks mfc42 -q
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks mfc42 -q
       become_user: "{{ username }}"
 
-    - name: Install Adob Digital Edition with winetricks
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 winetricks adobe_diged4 -q
+    - name: Install Adobe Digital Edition with winetricks
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks adobe_diged4 -q
       become_user: "{{ username }}"
+
+    - name: Copy Adobe Digital Edition icon
+      copy:
+        src: files/adobe-digital-edition.png
+        dest: /usr/share/icons/
+
+    - name: Copy Adobe Digital Edition startup file
+      copy:
+        src: files/adobe-digital-edition.desktop
+        dest: /usr/share/applications/
 
     - name: Install kindle reader 1.16 certfile
       copy:
         src: files/kindle.cert
-        dest: /etc/ssh/certs/b204d74a.0
+        dest: /etc/ssl/certs/b204d74a.0
         owner: root
         group: root
         mode: 0644
 
     - name: Install Kindler Reader with winetricks
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 winetricks kindle -q
+      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks kindle -q
       become_user: "{{ username }}"
 
-    - name: Install Windows Java JRE with wine
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 wine files/jre-8u311-windows-i586.exe /s
-      become_user: "{{ username }}"
+    # - name: Install Windows Java JRE with wine
+    #   shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine wine files/jre-8u311-windows-i586.exe /s
+    #   become_user: "{{ username }}"
+    #   ignore_errors: yes
 
     - name: Change registry to enable Java to work with wine
       lineinfile:
-        path: /home/{{ username }}/.wine32/system.reg
+        path: /home/{{ username }}/.wine/system.reg
         line: "{{ item }}"
         insertbefore: '^"PATH"='
       with_items:
@@ -306,17 +300,25 @@
 
     - name: Change registry to add Java to PATH
       lineinfile:
-        path: /home/{{ username }}/.wine32/system.reg
+        path: /home/{{ username }}/.wine/system.reg
         regexp: '"PATH"=(.*)"\n'
         line: '"PATH"=\1;%JAVA_HOME%\\\\bin"'
         backrefs: yes
 
-    - name: Install Cisco Network Assistant with wine
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine32 wine files/cna-windows-k9-installer-6-3-4-en.exe /s
-      become_user: "{{ username }}"
+    # - name: Install Cisco Network Assistant with wine
+    #   shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine wine files/cna-windows-k9-installer-6-3-4-en.exe /s
+    #   become_user: "{{ username }}"
 
     - name: Configure cron
       ansible.builtin.cron:
         name: "check manga update"
         minute: "0"
         job: "XDG_RUNTIME_DIR=/run/user/$(id -u) /usr/bin/python3 /home/ebenezer/git/scraping-manga/scraping-manga.py 2>&1 | /usr/bin/logger -t MANGA"
+    
+    - name: ATENTION
+      debug:
+        msg: You need to run the script files/install-CNA.sh manually
+  handlers:
+    - name: Update dconf
+      command: dconf update
+

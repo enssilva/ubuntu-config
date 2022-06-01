@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Adobe Digital Edition 4.5
+Exec=env WINEPREFIX="/home/ebenezer/.wine" wine C:\\\\Program\\ Files\\\\Adobe\\\\Adobe\\ Digital\\ Editions\\ 4.5\\\\DigitalEditions.exe 
+Type=Application
+StartupNotify=true
+Icon=/usr/share/icons/adobe-digital-edition.png
