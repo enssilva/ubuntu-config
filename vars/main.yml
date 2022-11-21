@@ -51,6 +51,7 @@ python_libs:
   - notify2
     #  - logging
   - logzero
+  - PyCrypto
 vscode_extensions:
   - donjayamanne.githistory
     #  - felixfbecker.php-intellisense
