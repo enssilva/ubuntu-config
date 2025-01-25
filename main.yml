@@ -139,11 +139,32 @@
         url: https://download.calibre-ebook.com/linux-installer.sh
         dest: /opt/calibre-installer.sh
         mode: '0744'
+      tags: calibre
 
     - name: Instal Calibre
-      shell: /opt/calibre-installer.sh
+      ansible.builtin.command: /opt/calibre-installer.sh
+      tags: calibre
 
-    # Calibre plugin DRM (https://github.com/nodrm/DeDRM_tools)
+    - name: Create directory to Calibre DeDRM
+      ansible.builtin.file:
+        path: /opt/calibre_dedrm
+        state: directory
+      tags: calibre_dedrm
+
+    - name: Get Calibre plugin DeDRM
+      ansible.builtin.unarchive:
+        src: https://github.com/noDRM/DeDRM_tools/releases/download/v{{ calibre_dedrm_version }}/DeDRM_tools_{{ calibre_dedrm_version }}.zip
+        dest: /opt/calibre_dedrm
+        remote_src: true
+      tags: calibre_dedrm
+
+    - name: Install Calibre plugin DeDRM
+      ansible.builtin.command: calibre-customize --add /opt/calibre_dedrm/DeDRM_plugin.zip
+      tags: calibre_dedrm
+
+    - name: Install Calibre plugin DeDRM
+      ansible.builtin.command: calibre-customize --add /opt/calibre_dedrm/Obok_plugin.zip
+      tags: calibre_dedrm
 
     - name: Install WPS Office
       apt:
