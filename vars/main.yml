@@ -3,6 +3,7 @@ mysql_repo_version: "0.8.22-1_all"
 docker_compose_version: "1.29.2"
 wps_office_deb: "https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/10976/wps-office_11.1.0.10976.XA_amd64.deb"
 winearch: 'win32'
+spotify_pubkey: "C85668DF69375001"
 pkg_list:
   - build-essential
   - docker-ce

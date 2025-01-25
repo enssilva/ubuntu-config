@@ -90,16 +90,20 @@
     #     filename: dropbox
 
     - name: Add Spotify's GPG key
-      apt_key:
-        url: https://download.spotify.com/debian/pubkey_5E3C45D7B312C643.gpg
-        keyring: /usr/share/keyrings/spotify.gpg
-        state: present
+      ansible.builtin.get_url:
+        url: https://download.spotify.com/debian/pubkey_{{ spotify_pubkey }}.gpg
+        dest: /usr/share/keyrings/spotify.gpg.old
+        mode: "0644"
+      notify:
+        - Dearmor Spotify GPG key
+      tags: spotify
 
     - name: Add Spotify repository
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: deb [signed-by=/usr/share/keyrings/spotify.gpg] http://repository.spotify.com stable non-free
         state: present
         filename: spotify
+      tags: spotify
 
     - name: Add git PPA's GPG key
       apt_key:
@@ -138,6 +142,8 @@
 
     - name: Instal Calibre
       shell: /opt/calibre-installer.sh
+
+    # Calibre plugin DRM (https://github.com/nodrm/DeDRM_tools)
 
     - name: Install WPS Office
       apt:
@@ -321,4 +327,11 @@
   handlers:
     - name: Update dconf
       command: dconf update
+
+    - name: Dearmor Spotify GPG key
+      ansible.builtin.command: gpg --batch --yes --dearmor --output spotify.gpg spotify.gpg.old
+      args:
+        chdir: /usr/share/keyrings
+      changed_when: true
+
 
