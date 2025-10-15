@@ -6,10 +6,14 @@
   vars_files:
     - 'vars/main.yml'
     - 'vars/secret.yml'
-
   tasks:
+    - name: Enable i386 pakcage
+      ansible.builtin.command:
+        cmd: dpkg --add-architecture i386
+      changed_when: true
+
     - name: Update & Upgrade
-      apt:
+      ansible.builtin.apt:
         update_cache: true
         upgrade: dist
         autoremove: true
@@ -19,7 +23,7 @@
       until: apt_action is success or ('Failed to lock apt for exclusive operation' not in apt_action.msg and '/var/lib/dpkg/lock' not in apt_action.msg)
 
     - name: Get information about installed packages
-      package_facts:
+      ansible.builtin.package_facts:
         manager: auto
 
     # - name: Install MySQL Repository Setup Package
@@ -27,20 +31,20 @@
     #     deb: https://dev.mysql.com/get/mysql-apt-config_{{ mysql_repo_version }}.deb
 
     - name: Accept virtualbox-ext-pack select license
-      shell: echo virtualbox-ext-pack virtualbox-ext-pack/license select true | debconf-set-selections
+      ansible.builtin.shell: |
+        set -e -o pipefail
+        echo virtualbox-ext-pack virtualbox-ext-pack/license select true | debconf-set-selections
+      args:
+        executable: /usr/bin/bash
+      changed_when: true
       when: "'virtualbox-ext-pack' not in ansible_facts.packages"
 
     - name: Add Docker's official GPG key
-      apt_key:
+      ansible.builtin.get_url:
         url: https://download.docker.com/linux/ubuntu/gpg
-        keyring: /usr/share/keyrings/docker-archive-keyring.gpg
-        state: present
-
-    - name: Add Docker's repository
-      copy:
-        src: files/docker.list
-        dest: /etc/apt/sources.list.d/docker.list
-        mode: '0644'
+        dest: /usr/share/keyrings/docker-archive-keyring.gpg.old
+        mode: "0644"
+      notify: Dearmor Docker official GPG key
 
     - name: Add VS Code GPG key
       ansible.builtin.get_url:
@@ -51,6 +55,41 @@
         - Dearmor VS Code GPG key
       tags: vscode
 
+    - name: Add Wine GPG key
+      ansible.builtin.get_url:
+        url: https://dl.winehq.org/wine-builds/winehq.key
+        dest: /usr/share/keyrings/winehq.gpg.old
+        mode: "0644"
+      notify: Dearmor WineHQ official GPG key
+
+    - name: Add Virtual Box key
+      ansible.builtin.get_url:
+        url: https://www.virtualbox.org/download/oracle_vbox_2016.asc
+        dest: /usr/share/keyrings/virtualbox.gpg.old
+        mode: "0644"
+      notify: Dearmor VirtualBox official GPG key
+
+    # - name: Add Spotify's GPG key
+    #   ansible.builtin.get_url:
+    #     url: https://download.spotify.com/debian/pubkey_{{ spotify_pubkey }}.gpg
+    #     dest: /usr/share/keyrings/spotify.gpg.old
+    #     mode: "0644"
+    #   notify:
+    #     - Dearmor Spotify GPG key
+    #   tags: spotify
+
+    - name: Add git PPA's GPG key
+      ansible.builtin.apt_key:
+        keyserver: keyserver.ubuntu.com
+        id: "{{ git_fingerprint }}"
+        keyring: /usr/share/keyrings/git.gpg
+        state: present
+      tags: git
+
+    - name: Run handlers
+      ansible.builtin.meta: flush_handlers
+      tags: always
+
     - name: Add VS Code's repository
       ansible.builtin.apt_repository:
         repo: deb [arch=amd64,arm64,armhf signed-by=/usr/share/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main
@@ -58,26 +97,30 @@
         filename: vscode
       tags: vscode
 
-    - name: Add Wine GPG key
-      apt_key:
-        url: https://dl.winehq.org/wine-builds/winehq.key
-        keyring: /usr/share/keyrings/winehq-archive.key
+    # - name: Add Docker's repository
+    #   ansible.builtin.copy:
+    #     src: files/docker.list
+    #     dest: /etc/apt/sources.list.d/docker.list
+    #     mode: '0644'
+
+    - name: Add Docker's repository
+      ansible.builtin.apt_repository:
+        repo: deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
         state: present
+        filename: docker
 
     - name: Add Wine repository
-      get_url:
-        url: https://dl.winehq.org/wine-builds/ubuntu/dists/{{ ansible_distribution_release }}/winehq-{{ ansible_distribution_release }}.sources
-        dest: /etc/apt/sources.list.d/winehq-{{ ansible_distribution_release }}.sources
-
-    - name: Add Virtual Box key
-      apt_key:
-        url: https://www.virtualbox.org/download/oracle_vbox_2016.asc
+      # get_url:
+      #   url: https://dl.winehq.org/wine-builds/ubuntu/dists/{{ ansible_distribution_release }}/winehq-{{ ansible_distribution_release }}.sources
+      #   dest: /etc/apt/sources.list.d/winehq-{{ ansible_distribution_release }}.sources
+      ansible.builtin.apt_repository:
+        repo: deb [arch=amd64,i386 signed-by=/usr/share/keyrings/winehq.gpg] https://dl.winehq.org/wine-builds/ubuntu {{ ansible_distribution_release }} main
         state: present
-        keyring: /usr/share/keyrings/oracle_vbox_2016.gpg
-    
+        filename: winehq
+
     - name: Add Virtual Box repository
-      apt_repository:
-        repo: deb [arch=amd64 signed-by=/usr/share/keyrings/oracle_vbox_2016.gpg] https://download.virtualbox.org/virtualbox/debian {{ ansible_distribution_release }} contrib
+      ansible.builtin.apt_repository:
+        repo: deb [arch=amd64 signed-by=/usr/share/keyrings/virtualbox.gpg] https://download.virtualbox.org/virtualbox/debian {{ ansible_distribution_release }} contrib
         state: present
         filename: virtualbox
 
@@ -93,66 +136,60 @@
     #     state: present
     #     filename: dropbox
 
-    - name: Add Spotify's GPG key
-      ansible.builtin.get_url:
-        url: https://download.spotify.com/debian/pubkey_{{ spotify_pubkey }}.gpg
-        dest: /usr/share/keyrings/spotify.gpg.old
-        mode: "0644"
-      notify:
-        - Dearmor Spotify GPG key
-      tags: spotify
-
-    - name: Add Spotify repository
-      ansible.builtin.apt_repository:
-        repo: deb [signed-by=/usr/share/keyrings/spotify.gpg] http://repository.spotify.com stable non-free
-        state: present
-        filename: spotify
-      tags: spotify
-
-    - name: Add git PPA's GPG key
-      apt_key:
-        keyserver: keyserver.ubuntu.com
-        id: E1DD270288B4E6030699E45FA1715D88E1DF1F24
-        keyring: /usr/share/keyrings/git.gpg
-        state: present
+    # - name: Add Spotify repository
+    #   ansible.builtin.apt_repository:
+    #     repo: deb [signed-by=/usr/share/keyrings/spotify.gpg] http://repository.spotify.com stable non-free
+    #     state: present
+    #     filename: spotify
+    #   tags: spotify
 
     - name: Add git latest stable repository from PPA
-      apt_repository:
+      ansible.builtin.apt_repository:
         repo: deb [signed-by=/usr/share/keyrings/git.gpg] http://ppa.launchpad.net/git-core/ppa/ubuntu {{ ansible_distribution_release }} main
         filename: git
+      tags: git
 
     - name: Install needed packages
-      apt:
+      ansible.builtin.apt:
         name: "{{ pkg_list }}"
         state: present
         update_cache: true
 
-    - name: Install docker compose
-      get_url:
-        url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
-        dest: /usr/local/bin/docker-compose
-        mode: '0755'
+    - name: Install Snap package
+      community.general.snap:
+        name: "{{ snap_pkg }}"
+        state: present
+        classic: true
+
+    # - name: Install docker compose
+    #   get_url:
+    #     url: https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
+    #     dest: /usr/local/bin/docker-compose
+    #     mode: '0755'
 
     - name: Install Google Chrome
-      apt:
+      ansible.builtin.apt:
         deb: https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
         state: present
 
     - name: Get Calibre installer
-      get_url:
+      ansible.builtin.get_url:
         url: https://download.calibre-ebook.com/linux-installer.sh
         dest: /opt/calibre-installer.sh
         mode: '0744'
       tags: calibre
 
     - name: Instal Calibre
-      ansible.builtin.command: /opt/calibre-installer.sh
+      ansible.builtin.command:
+        cmd: /opt/calibre-installer.sh
+      changed_when: true
       tags: calibre
 
     - name: Create directory to Calibre DeDRM
       ansible.builtin.file:
         path: /opt/calibre_dedrm
         state: directory
+        mode: "0777"
       tags: calibre_dedrm
 
     - name: Get Calibre plugin DeDRM
@@ -163,85 +200,94 @@
       tags: calibre_dedrm
 
     - name: Install Calibre plugin DeDRM
-      ansible.builtin.command: calibre-customize --add /opt/calibre_dedrm/DeDRM_plugin.zip
+      ansible.builtin.command:
+        cmd: calibre-customize --add /opt/calibre_dedrm/DeDRM_plugin.zip
+      changed_when: true
       tags: calibre_dedrm
 
-    - name: Install Calibre plugin DeDRM
-      ansible.builtin.command: calibre-customize --add /opt/calibre_dedrm/Obok_plugin.zip
+    - name: Install Calibre plugin DeDRM (Obok)
+      ansible.builtin.command:
+        cmd: calibre-customize --add /opt/calibre_dedrm/Obok_plugin.zip
+      changed_when: true
       tags: calibre_dedrm
 
     - name: Install WPS Office
-      apt:
+      ansible.builtin.apt:
         deb: "{{ wps_office_deb }}"
         state: present
+      when: install_wps
 
-    - name: Install MySql Workbench
-      community.general.snap:
-        name: mysql-workbench-community
-        classic: yes
-
-    - name: Install python needed libs
-      pip:
-        name: "{{ python_libs }}"
+    # - name: Install python needed libs
+    #   # ansible.builtin.pip:
+    #   #   name: "{{ python_libs }}"
+    #   community.general.pipx:
+    #     name: "{{ item }}"
+    #   with_items: "{{ python_libs }}"
+    #   become_user: "{{ username }}"
 
     - name: Install VS Code extensions
-      shell: code --install-extension {{ item }}
+      ansible.builtin.command:
+        cmd: code --install-extension {{ item }}
       with_items: "{{ vscode_extensions }}"
+      changed_when: true
       become_user: "{{ username }}"
+      become: true
 
-    - name: Add user to docker's group
-      user:
-        name: "{{ username }}"
-        groups: docker
-        append: yes
+    # - name: Add user to docker's group
+    #   user:
+    #     name: "{{ username }}"
+    #     groups: docker
+    #     append: yes
 
     - name: Configure new dconf profile for keyboard shortcut
-      copy:
+      ansible.builtin.copy:
         src: files/dconf-profile-user
         dest: /etc/dconf/profile/user
         owner: root
         group: root
-        mode: 0644
+        mode: "0644"
       notify: Update dconf
 
     - name: Create directory for custom keyboard shortcut
-      file:
+      ansible.builtin.file:
         path: /etc/dconf/db/local.d
         state: directory
+        mode: "0777"
       notify: Update dconf
 
     - name: Copy custom keyboard shortcut
-      copy:
+      ansible.builtin.copy:
         src: files/01-local-keyboard-shortcut
         dest: /etc/dconf/db/local.d/01-local-keyboard-shortcut
+        mode: "0644"
       notify: Update dconf
 
     - name: Create /opt/script directory
-      file:
+      ansible.builtin.file:
         path: /opt/script
         state: directory
         owner: root
         group: root
-        mode: 0755
+        mode: "0755"
 
     - name: Copy script to update packages
-      copy:
+      ansible.builtin.copy:
         src: files/update.sh
         dest: /opt/script/update.sh
         owner: root
         group: root
-        mode: 0744
+        mode: "0744"
 
     - name: Copy script to check for manga update
-      template:
+      ansible.builtin.template:
         src: templates/manga.sh.j2
         dest: /opt/script/manga.sh
         owner: root
         group: root
-        mode: 0777
+        mode: "0777"
 
     - name: Add config to bash.bashrc
-      blockinfile:
+      ansible.builtin.blockinfile:
         path: /etc/bash.bashrc
         block: |
           export PATH=/opt/script:$PATH
@@ -251,69 +297,106 @@
         state: present
 
     - name: Create folders to git
-      file:
+      ansible.builtin.file:
         path: /home/{{ username }}/{{ item }}
         state: directory
-        mode: 0755
-        owner: "{{ username  }}"
-        group: "{{ username  }}"
+        mode: "0755"
+        owner: "{{ username }}"
+        group: "{{ username }}"
       with_items:
         - gitlab
         - github
 
     - name: Clone manga repository
-      git:
+      ansible.builtin.git:
         repo: https://github.com/enssilva/scraping-manga.git
         dest: /home/{{ username }}/github/scraping-manga
+        version: main
       become_user: "{{ username }}"
+      become: true
 
     - name: Get Gecko
-      get_url:
+      ansible.builtin.get_url:
         url: http://dl.winehq.org/wine/wine-gecko/2.47.2/wine-gecko-2.47.2-x86.msi
         dest: /opt/
-        mode: 0755
+        mode: "0755"
+
+    # dpkg --add-architecture i386 && apt-get update &&
+    # apt-get install wine32:i386
 
     - name: Create Wine prefix
-      shell: WINEPREFIX=/home/{{ username }}/.wine WINEARCH=win32 wine wineboot
+      ansible.builtin.command:
+        cmd: wine wineboot
+      environment:
+        WINEARCH: win32
+        WINEPREFIX: /home/{{ username }}/.wine
+      changed_when: true
       become_user: "{{ username }}"
+      become: true
 
     - name: Install Gecko
-      shell: WINEPREFIX=/home/{{ username }}/.wine WINEARCH=win32 wine msiexec /i /opt/wine-gecko-2.47.2-x86.msi
+      ansible.builtin.command:
+        cmd: wine msiexec /i /opt/wine-gecko-2.47.2-x86.msi
+      environment:
+        WINEARCH: win32
+        WINEPREFIX: /home/{{ username }}/.wine
+      changed_when: true
       become_user: "{{ username }}"
+      become: true
 
     - name: Install .NET 4.0 with winetricks
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks dotnet40 -q
+      ansible.builtin.command:
+        cmd: winetricks dotnet40 -q
+      environment:
+        WINEARCH: win32
+        WINEPREFIX: /home/{{ username }}/.wine
+      changed_when: true
       become_user: "{{ username }}"
+      become: true
 
     - name: Install mfc42 library with winetricks
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks mfc42 -q
+      ansible.builtin.command:
+        cmd: winetricks mfc42 -q
+      environment:
+        WINEARCH: win32
+        WINEPREFIX: /home/{{ username }}/.wine
+      changed_when: true
       become_user: "{{ username }}"
+      become: true
 
-    - name: Install Adobe Digital Edition with winetricks
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks adobe_diged4 -q
-      become_user: "{{ username }}"
+    # - name: Install Adobe Digital Edition with winetricks
+    #   shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks adobe_diged4 -q
+    #   become_user: "{{ username }}"
 
     - name: Copy Adobe Digital Edition icon
-      copy:
+      ansible.builtin.copy:
         src: files/adobe-digital-edition.png
         dest: /usr/share/icons/
+        mode: "0644"
 
     - name: Copy Adobe Digital Edition startup file
-      copy:
+      ansible.builtin.copy:
         src: files/adobe-digital-edition.desktop
         dest: /usr/share/applications/
+        mode: "0644"
 
     - name: Install kindle reader 1.16 certfile
-      copy:
+      ansible.builtin.copy:
         src: files/kindle.cert
         dest: /etc/ssl/certs/b204d74a.0
         owner: root
         group: root
-        mode: 0644
+        mode: "0644"
 
     - name: Install Kindler Reader with winetricks
-      shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine winetricks kindle -q
+      ansible.builtin.command:
+        cmd: winetricks kindle -q
+      environment:
+        WINEARCH: win32
+        WINEPREFIX: /home/{{ username }}/.wine
+      changed_when: true
       become_user: "{{ username }}"
+      become: true
 
     # - name: Install Windows Java JRE with wine
     #   shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine wine files/jre-8u311-windows-i586.exe /s
@@ -321,7 +404,7 @@
     #   ignore_errors: yes
 
     - name: Change registry to enable Java to work with wine
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /home/{{ username }}/.wine/system.reg
         line: "{{ item }}"
         insertbefore: '^"PATH"='
@@ -330,11 +413,11 @@
         - '"JAVA_HOME"=str(7):"C:\\Program Files\\Java\\jre1.8.0_311\0"'
 
     - name: Change registry to add Java to PATH
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /home/{{ username }}/.wine/system.reg
         regexp: '"PATH"=(.*)"\n'
         line: '"PATH"=\1;%JAVA_HOME%\\\\bin"'
-        backrefs: yes
+        backrefs: true
 
     # - name: Install Cisco Network Assistant with wine
     #   shell: WINEARCH=win32 WINEPREFIX=/home/{{ username }}/.wine wine files/cna-windows-k9-installer-6-3-4-en.exe /s
@@ -345,22 +428,42 @@
         name: "check manga update"
         minute: "0"
         job: "XDG_RUNTIME_DIR=/run/user/$(id -u) /usr/bin/python3 /home/ebenezer/git/scraping-manga/scraping-manga.py 2>&1 | /usr/bin/logger -t MANGA"
-    
+
     - name: ATENTION
-      debug:
+      ansible.builtin.debug:
         msg: You need to run the script files/install-CNA.sh manually
   handlers:
     - name: Update dconf
-      command: dconf update
+      ansible.builtin.command:
+        cmd: dconf update
+      changed_when: true
 
-    - name: Dearmor Spotify GPG key
-      ansible.builtin.command: gpg --batch --yes --dearmor --output spotify.gpg spotify.gpg.old
+    # - name: Dearmor Spotify GPG key
+    #   ansible.builtin.command: gpg --batch --yes --dearmor --output spotify.gpg spotify.gpg.old
+    #   args:
+    #     chdir: /usr/share/keyrings
+    #   changed_when: true
+
+    - name: Dearmor VS Code GPG key
+      ansible.builtin.command: gpg --batch --yes --dearmor --output packages.microsoft.gpg packages.microsoft.gpg.old
       args:
         chdir: /usr/share/keyrings
       changed_when: true
 
-    - name: Dearmor VS Code GPG key
-      ansible.builtin.command: gpg --batch --yes --dearmor --output packages.microsoft.gpg packages.microsoft.gpg.old
+    - name: Dearmor Docker official GPG key
+      ansible.builtin.command: gpg --batch --yes --dearmor --output docker-archive-keyring.gpg docker-archive-keyring.gpg.old
+      args:
+        chdir: /usr/share/keyrings
+      changed_when: true
+
+    - name: Dearmor WineHQ official GPG key
+      ansible.builtin.command: gpg --batch --yes --dearmor --output winehq.gpg winehq.gpg.old
+      args:
+        chdir: /usr/share/keyrings
+      changed_when: true
+
+    - name: Dearmor VirtualBox official GPG key
+      ansible.builtin.command: gpg --batch --yes --dearmor --output virtualbox.gpg virtualbox.gpg.old
       args:
         chdir: /usr/share/keyrings
       changed_when: true

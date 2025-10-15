@@ -1,15 +1,18 @@
 ---
-mysql_repo_version: "0.8.22-1_all"
-docker_compose_version: "1.29.2"
+install_wps: false
+# mysql_repo_version: "0.8.22-1_all"
+# docker_compose_version: "1.29.2"
 calibre_dedrm_version: "10.0.3"
 wps_office_deb: "https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/10976/wps-office_11.1.0.10976.XA_amd64.deb"
 winearch: 'win32'
-spotify_pubkey: "C85668DF69375001"
+# spotify_pubkey: "C85668DF69375001"
+git_fingerprint: "F911AB184317630C59970973E363C90F8F1B6217"
 pkg_list:
   - build-essential
   - docker-ce
   - docker-ce-cli
   - containerd.io
+  - docker-compose-plugin
     #  - mysql-workbench
   - mysql-client
   - nmap
@@ -25,13 +28,13 @@ pkg_list:
   - default-jdk
   - traceroute
   - imagemagick
-  # - winehq-stable
+  - winehq-stable
   # - winehq-staging
   - python3-pip
   - winetricks
     #  - dropbox
   - nautilus-dropbox
-  - spotify-client
+  # - spotify-client
   - git
   - ca-certificates
   - wget
@@ -43,6 +46,10 @@ pkg_list:
   - android-tools-fastboot
   - winbind
   - libxcb-cursor0
+snap_pkg:
+  - spotify
+  - mysql-workbench-community
+  - joplin-desktop
 python_libs:
   - sklearn
   - pandas
