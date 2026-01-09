@@ -33,7 +33,7 @@ pkg_list:
   - python3-pip
   - winetricks
     #  - dropbox
-  - nautilus-dropbox
+  # - nautilus-dropbox
   # - spotify-client
   - git
   - ca-certificates
