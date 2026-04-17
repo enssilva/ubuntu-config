@@ -86,6 +86,14 @@
         state: present
       tags: git
 
+    - name: Add nextcloud PPA's GPG key
+      ansible.builtin.apt_key:
+        keyserver: keyserver.ubuntu.com
+        id: "{{ nextcloud_fingerprint }}"
+        keyring: /usr/share/keyrings/nextcloud.gpg
+        state: present
+      tags: nextcloud
+
     - name: Run handlers
       ansible.builtin.meta: flush_handlers
       tags: always
@@ -148,6 +156,12 @@
         repo: deb [signed-by=/usr/share/keyrings/git.gpg] http://ppa.launchpad.net/git-core/ppa/ubuntu {{ ansible_distribution_release }} main
         filename: git
       tags: git
+
+    - name: Add nextcloud repository from PPA
+      ansible.builtin.apt_repository:
+        repo: deb [signed-by=/usr/share/keyrings/nextcloud.gpg] https://ppa.launchpadcontent.net/nextcloud-devs/client/ubuntu {{ ansible_distribution_release }} main
+        filename: nextcloud
+      tags: nextcloud
 
     - name: Install needed packages
       ansible.builtin.apt:

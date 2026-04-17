@@ -7,6 +7,7 @@ wps_office_deb: "https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/lin
 winearch: 'win32'
 # spotify_pubkey: "C85668DF69375001"
 git_fingerprint: "F911AB184317630C59970973E363C90F8F1B6217"
+nextcloud_fingerprint: "1FCD77DD0DBEF5699AD2610160EE47FBAD3DD469"
 pkg_list:
   - build-essential
   - docker-ce
@@ -46,6 +47,7 @@ pkg_list:
   - android-tools-fastboot
   - winbind
   - libxcb-cursor0
+  - nextcloud-client
 snap_pkg:
   - spotify
   - mysql-workbench-community
