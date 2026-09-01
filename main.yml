@@ -199,31 +199,43 @@
       changed_when: true
       tags: calibre
 
-    - name: Create directory to Calibre DeDRM
+    - name: Create directory to Calibre plugins
       ansible.builtin.file:
-        path: /opt/calibre_dedrm
+        path: /opt/calibre_plugins
         state: directory
         mode: "0777"
-      tags: calibre_dedrm
+      tags: calibre_plugin
 
     - name: Get Calibre plugin DeDRM
       ansible.builtin.unarchive:
         src: https://github.com/noDRM/DeDRM_tools/releases/download/v{{ calibre_dedrm_version }}/DeDRM_tools_{{ calibre_dedrm_version }}.zip
-        dest: /opt/calibre_dedrm
+        dest: /opt/calibre_plugins
         remote_src: true
-      tags: calibre_dedrm
+      tags: calibre_plugin
+
+    - name: Get Calibre plugin DeACSM
+      ansible.builtin.get_url:
+        url: https://github.com/Leseratte10/acsm-calibre-plugin/releases/download/v{{ calibre_deacsm_version }}/DeACSM_{{ calibre_deacsm_version }}.zip
+        dest: /opt/calibre_plugins
+        mode: "0664"
 
     - name: Install Calibre plugin DeDRM
       ansible.builtin.command:
-        cmd: calibre-customize --add /opt/calibre_dedrm/DeDRM_plugin.zip
+        cmd: calibre-customize --add /opt/calibre_plugins/DeDRM_plugin.zip
       changed_when: true
-      tags: calibre_dedrm
+      tags: calibre_plugin
 
     - name: Install Calibre plugin DeDRM (Obok)
       ansible.builtin.command:
-        cmd: calibre-customize --add /opt/calibre_dedrm/Obok_plugin.zip
+        cmd: calibre-customize --add /opt/calibre_plugins/Obok_plugin.zip
       changed_when: true
-      tags: calibre_dedrm
+      tags: calibre_plugin
+
+    - name: Install Calibre plugin DeACSM
+      ansible.builtin.command:
+        cmd: calibre-customize --add /opt/calibre_plugins/DeACSM_{{ calibre_deacsm_version }}.zip
+      changed_when: true
+      tags: calibre_plugin
 
     - name: Install WPS Office
       ansible.builtin.apt:
