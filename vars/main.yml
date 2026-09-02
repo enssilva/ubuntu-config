@@ -4,6 +4,7 @@ install_wps: false
 # docker_compose_version: "1.29.2"
 calibre_dedrm_version: "10.0.9"
 calibre_deacsm_version: "0.0.16"
+calibre_crosspoint_version: "0.2.7"
 wps_office_deb: "https://wdl1.pcfg.cache.wpscdn.com/wpsdl/wpsoffice/download/linux/10976/wps-office_11.1.0.10976.XA_amd64.deb"
 winearch: 'win32'
 # spotify_pubkey: "C85668DF69375001"

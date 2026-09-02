@@ -219,6 +219,12 @@
         dest: /opt/calibre_plugins
         mode: "0664"
 
+    - name: Get Calibre plugin CrossPoint Reader
+      ansible.builtin.get_url:
+        url: https://github.com/crosspoint-reader/calibre-plugins/releases/download/v{{ calibre_crosspoint_version }}/crosspoint_reader-v{{ calibre_crosspoint_version }}.zip
+        dest: /opt/calibre_plugins
+        mode: "0664"
+
     - name: Install Calibre plugin DeDRM
       ansible.builtin.command:
         cmd: calibre-customize --add /opt/calibre_plugins/DeDRM_plugin.zip
@@ -234,6 +240,12 @@
     - name: Install Calibre plugin DeACSM
       ansible.builtin.command:
         cmd: calibre-customize --add /opt/calibre_plugins/DeACSM_{{ calibre_deacsm_version }}.zip
+      changed_when: true
+      tags: calibre_plugin
+
+    - name: Install Calibre plugin CrossPoint Reader
+      ansible.builtin.command:
+        cmd: calibre-customize --add /opt/calibre_plugins/crosspoint_reader-v{{ calibre_crosspoint_version }}.zip
       changed_when: true
       tags: calibre_plugin
 
